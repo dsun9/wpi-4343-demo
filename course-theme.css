@@ -1,0 +1,58 @@
+:root {
+  color-scheme: light;
+  --background: #f5f7fa;
+  --surface: #ffffff;
+  --text: #182638;
+  --muted: #536174;
+  --accent: #a6192e;
+  --border: #d5dce5;
+  --control: #ffffff;
+  --hover: #edf0f5;
+  --selected: #fceef1;
+  --danger: #b00020;
+  --canvas: #e8edf3;
+  --cell-input: #ddddff;
+  --cell-filter: #ffdddd;
+  --cell-output: #ddffdd;
+  --cell-padding: #dddddd;
+  --input-highlight: #0000aa;
+  --filter-highlight: #aa0000;
+  --output-highlight: #008000;
+  scrollbar-color: var(--muted) var(--background);
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --background: #0f1722;
+  --surface: #172333;
+  --text: #e5edf6;
+  --muted: #adbed0;
+  --accent: #ff9bad;
+  --border: #3b4b60;
+  --control: #111d2b;
+  --hover: #243549;
+  --selected: #402535;
+  --danger: #ff9bad;
+  --canvas: #101820;
+  --cell-input: #253c62;
+  --cell-filter: #57343f;
+  --cell-output: #214b3b;
+  --cell-padding: #283442;
+  --input-highlight: #8fbaff;
+  --filter-highlight: #ff99a8;
+  --output-highlight: #78e6a1;
+}
+[data-theme-toggle] {
+  width: auto;
+  flex: none;
+  padding: 7px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--control);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+[data-theme-toggle]:hover { background: var(--hover); }
+[data-theme-toggle]:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+@media (forced-colors: active) { :root { scrollbar-color: auto; } }

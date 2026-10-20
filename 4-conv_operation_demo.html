@@ -4,56 +4,58 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>2D Convolution Teaching Demo (JS)</title>
+  <script src="course-theme.js"></script>
+  <link rel="stylesheet" href="course-theme.css" />
   <style>
-    :root { color-scheme: light; }
-    body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+    body { margin: 0; color: var(--text); background: var(--background); font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
     .app { display: flex; height: 100vh; }
     .ctrl {
       width: 360px; min-width: 320px; max-width: 420px;
-      border-right: 1px solid #ddd; padding: 12px; overflow: auto;
-      background: #fafafa;
+      border-right: 1px solid var(--border); padding: 12px; overflow: auto;
+      background: var(--background);
     }
     .view { flex: 1; display: flex; flex-direction: column; padding: 12px; gap: 10px; }
-    fieldset { border: 1px solid #ddd; border-radius: 10px; padding: 10px; margin: 10px 0; background: #fff; }
-    legend { padding: 0 8px; color: #333; }
-    label { display: block; font-size: 13px; color: #333; margin: 6px 0 4px; }
+    fieldset { border: 1px solid var(--border); border-radius: 10px; padding: 10px; margin: 10px 0; background: var(--surface); }
+    legend { padding: 0 8px; color: var(--text); }
+    label { display: block; font-size: 13px; color: var(--text); margin: 6px 0 4px; }
     input, select, textarea, button {
       width: 100%; box-sizing: border-box; font-size: 14px;
-      padding: 8px 10px; border-radius: 10px; border: 1px solid #ccc;
-      background: #fff;
+      padding: 8px 10px; border-radius: 10px; border: 1px solid var(--border);
+      background: var(--control); color: var(--text);
     }
     textarea { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; height: 120px; resize: vertical; }
-    button { cursor: pointer; border: 1px solid #bbb; background: #f3f3f3; }
-    button:hover { background: #ececec; }
+    button { cursor: pointer; border: 1px solid var(--border); background: var(--control); }
+    button:hover { background: var(--hover); }
     .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
-    .small { font-size: 12px; color: #666; line-height: 1.35; }
-    .status { padding: 10px; border: 1px solid #ddd; border-radius: 10px; background: #fff; font-size: 13px; color: #333; }
+    .small { font-size: 12px; color: var(--muted); line-height: 1.35; }
+    .status { padding: 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); font-size: 13px; color: var(--text); }
     .views { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; flex: 1; min-height: 0; }
     .panel {
-      border: 1px solid #ddd; border-radius: 12px; overflow: hidden; background: #1f1f1f;
+      border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--canvas);
       display: flex; flex-direction: column; min-height: 0;
     }
     .panel h3 {
-      margin: 0; padding: 10px 12px; font-size: 14px; color: #eee;
-      background: #2b2b2b; border-bottom: 1px solid #444;
+      margin: 0; padding: 10px 12px; font-size: 14px; color: var(--text);
+      background: var(--surface); border-bottom: 1px solid var(--border);
       display: flex; justify-content: space-between; align-items: center;
     }
-    .panel h3 span { color: #bbb; font-weight: 500; font-size: 12px; }
+    .panel h3 span { color: var(--muted); font-weight: 500; font-size: 12px; }
     .canvasWrap { flex: 1; position: relative; min-height: 0; }
     canvas { width: 100%; height: 100%; display: block; }
-    .hint { color: #bbb; font-size: 12px; padding: 6px 12px; background: #2b2b2b; border-top: 1px solid #444; }
-    .danger { color: #b00020; font-weight: 600; }
-    .kinfo { font-size: 12px; color: #444; margin-top: 6px; white-space: pre-wrap; }
+    .hint { color: var(--muted); font-size: 12px; padding: 6px 12px; background: var(--surface); border-top: 1px solid var(--border); }
+    .danger { color: var(--danger); font-weight: 600; }
+    .kinfo { font-size: 12px; color: var(--muted); margin-top: 6px; white-space: pre-wrap; }
     .samples { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 6px 0 8px; }
     .sample { padding: 6px; font-size: 13px; }
     .sample img { display: block; width: 100%; height: 80px; object-fit: cover; border-radius: 5px; margin-bottom: 5px; }
-    .sample[aria-pressed="true"] { border-color: #a6192e; background: #fceef1; outline: 1px solid #a6192e; }
-    :focus-visible { outline: 3px solid #a6192e; outline-offset: 2px; }
-    .course-home { display: inline-block; margin-bottom: 10px; color: #a6192e; font-size: 13px; }
+    .sample[aria-pressed="true"] { border-color: var(--accent); background: var(--selected); outline: 1px solid var(--accent); }
+    :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+    .course-home { display: inline-block; margin-bottom: 10px; color: var(--accent); font-size: 13px; }
+    .demo-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
     @media (max-width: 760px) {
       .app { flex-direction: column; height: auto; }
-      .ctrl { width: auto; min-width: 0; max-width: none; border-right: 0; border-bottom: 1px solid #ddd; overflow: visible; }
+      .ctrl { width: auto; min-width: 0; max-width: none; border-right: 0; border-bottom: 1px solid var(--border); overflow: visible; }
       .view { min-height: 0; }
       .views { grid-template-columns: 1fr; flex: none; }
       .panel { height: 300px; min-height: 0; }
@@ -63,8 +65,11 @@
 <body>
   <div class="app">
     <div class="ctrl">
-      <a class="course-home" href="index.html" target="_top">← CS 4343 course demos</a>
-      <h2 style="margin: 4px 0 10px;">2D Convolution Demo (JS)</h2>
+      <a class="course-home" href="index.html" target="_top" data-theme-link>← CS 4343 course demos</a>
+      <div class="demo-heading">
+        <h2 style="margin: 4px 0 10px;">2D Convolution Demo (JS)</h2>
+        <button type="button" data-theme-toggle>Dark mode</button>
+      </div>
 
       <fieldset>
         <legend>Input image</legend>

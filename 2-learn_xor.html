@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="A manual XOR neural network lab for deep learning courses.">
   <title>Learning XOR</title>
+  <script src="course-theme.js"></script>
   <style>
     :root {
       color-scheme: dark;
@@ -793,7 +794,6 @@
       };
       let knobDrag = null;
       let trainingTimer = null;
-      const THEME_STORAGE_KEY = 'xor-lab-theme';
 
       const $ = (selector, root = document) => root.querySelector(selector);
       const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -803,29 +803,14 @@
       };
       const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
-      function storedTheme() {
-        try {
-          const theme = localStorage.getItem(THEME_STORAGE_KEY);
-          return theme === 'light' || theme === 'dark' ? theme : 'dark';
-        } catch {
-          return 'dark';
-        }
-      }
-
       function applyTheme(theme, persist = false) {
+        if (persist) { CourseTheme.set(theme); return; }
         const isLight = theme === 'light';
         document.documentElement.dataset.theme = isLight ? 'light' : 'dark';
         const button = $('#theme-toggle');
         button.textContent = isLight ? 'Dark theme' : 'Light theme';
         button.setAttribute('aria-pressed', isLight ? 'true' : 'false');
         button.setAttribute('aria-label', `Switch to ${isLight ? 'dark' : 'light'} theme`);
-        if (persist) {
-          try {
-            localStorage.setItem(THEME_STORAGE_KEY, isLight ? 'light' : 'dark');
-          } catch {
-            // The theme still works when storage is unavailable.
-          }
-        }
       }
 
       function toggleTheme() {
@@ -1227,7 +1212,8 @@
         render();
       });
 
-      applyTheme(storedTheme());
+      window.addEventListener('course-theme-change', event => applyTheme(event.detail.theme));
+      applyTheme(CourseTheme.get());
       window.XORLab = { state, XOR_ROWS, sigmoid, activationValue, activationDerivative, binaryCrossEntropy, forwardRow, evaluate, calculateGradients, stepGradientDescent, startGradientDescent, stopGradientDescent, toggleGradientDescent, applyTheme, toggleTheme, render };
       render();
     })();
