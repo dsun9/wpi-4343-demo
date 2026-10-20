@@ -1,0 +1,874 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>2D Convolution Teaching Demo (JS)</title>
+  <style>
+    :root { color-scheme: light; }
+    body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+    .app { display: flex; height: 100vh; }
+    .ctrl {
+      width: 360px; min-width: 320px; max-width: 420px;
+      border-right: 1px solid #ddd; padding: 12px; overflow: auto;
+      background: #fafafa;
+    }
+    .view { flex: 1; display: flex; flex-direction: column; padding: 12px; gap: 10px; }
+    fieldset { border: 1px solid #ddd; border-radius: 10px; padding: 10px; margin: 10px 0; background: #fff; }
+    legend { padding: 0 8px; color: #333; }
+    label { display: block; font-size: 13px; color: #333; margin: 6px 0 4px; }
+    input, select, textarea, button {
+      width: 100%; box-sizing: border-box; font-size: 14px;
+      padding: 8px 10px; border-radius: 10px; border: 1px solid #ccc;
+      background: #fff;
+    }
+    textarea { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; height: 120px; resize: vertical; }
+    button { cursor: pointer; border: 1px solid #bbb; background: #f3f3f3; }
+    button:hover { background: #ececec; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+    .small { font-size: 12px; color: #666; line-height: 1.35; }
+    .status { padding: 10px; border: 1px solid #ddd; border-radius: 10px; background: #fff; font-size: 13px; color: #333; }
+    .views { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; flex: 1; min-height: 0; }
+    .panel {
+      border: 1px solid #ddd; border-radius: 12px; overflow: hidden; background: #1f1f1f;
+      display: flex; flex-direction: column; min-height: 0;
+    }
+    .panel h3 {
+      margin: 0; padding: 10px 12px; font-size: 14px; color: #eee;
+      background: #2b2b2b; border-bottom: 1px solid #444;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .panel h3 span { color: #bbb; font-weight: 500; font-size: 12px; }
+    .canvasWrap { flex: 1; position: relative; min-height: 0; }
+    canvas { width: 100%; height: 100%; display: block; }
+    .hint { color: #bbb; font-size: 12px; padding: 6px 12px; background: #2b2b2b; border-top: 1px solid #444; }
+    .danger { color: #b00020; font-weight: 600; }
+    .kinfo { font-size: 12px; color: #444; margin-top: 6px; white-space: pre-wrap; }
+    .samples { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 6px 0 8px; }
+    .sample { padding: 6px; font-size: 13px; }
+    .sample img { display: block; width: 100%; height: 80px; object-fit: cover; border-radius: 5px; margin-bottom: 5px; }
+    .sample[aria-pressed="true"] { border-color: #a6192e; background: #fceef1; outline: 1px solid #a6192e; }
+    :focus-visible { outline: 3px solid #a6192e; outline-offset: 2px; }
+    .course-home { display: inline-block; margin-bottom: 10px; color: #a6192e; font-size: 13px; }
+    @media (max-width: 760px) {
+      .app { flex-direction: column; height: auto; }
+      .ctrl { width: auto; min-width: 0; max-width: none; border-right: 0; border-bottom: 1px solid #ddd; overflow: visible; }
+      .view { min-height: 0; }
+      .views { grid-template-columns: 1fr; flex: none; }
+      .panel { height: 300px; min-height: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="ctrl">
+      <a class="course-home" href="index.html" target="_top">← CS 4343 course demos</a>
+      <h2 style="margin: 4px 0 10px;">2D Convolution Demo (JS)</h2>
+
+      <fieldset>
+        <legend>Input image</legend>
+        <div class="small" id="sampleHelp">Choose a sample image:</div>
+        <div class="samples" role="group" aria-labelledby="sampleHelp">
+          <button class="sample" type="button" data-sample="4-conv_bell.jpg" aria-pressed="false">
+            <img src="4-conv_bell.jpg" alt="" width="140" height="80" />
+            Bell
+          </button>
+          <button class="sample" type="button" data-sample="4-conv_Lenna.png" aria-pressed="false">
+            <img src="4-conv_Lenna.png" alt="" width="140" height="80" />
+            Lenna
+          </button>
+        </div>
+        <button id="checkerBtn" type="button">Use checkerboard</button>
+        <label for="fileInput">Or upload your own image…</label>
+        <input id="fileInput" type="file" accept="image/*" aria-describedby="uploadHelp" />
+        <div class="small" id="uploadHelp">Your image is processed locally in your browser.</div>
+        <div style="height:8px;"></div>
+        <button id="saveBtn">Save Output (PNG)…</button>
+        <label style="margin-top:10px;">
+          <input id="grayChk" type="checkbox" style="width:auto; margin-right:6px; vertical-align: middle;" />
+          Convert to grayscale for input
+        </label>
+        <div class="small">Tip: Both sample images are included with this demo.</div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Presets</legend>
+        <select id="presetSel">
+          <option>(choose a preset)</option>
+        </select>
+        <div class="kinfo" id="presetInfo">Preset: N/A</div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Kernel</legend>
+        <label>Kernel (matrix literal or gaussian(k)/box(k)/identity(k))</label>
+        <textarea id="kernelText">[[0,0,0],[0,1,0],[0,0,0]]</textarea>
+        <div class="small">
+          Examples:<br/>
+          <code>[[0,-1,0],[-1,5,-1],[0,-1,0]]</code><br/>
+          <code>gaussian(5)</code> &nbsp; <code>box(3)</code> &nbsp; <code>identity(7)</code>
+        </div>
+        <div class="kinfo" id="kinfo">Kernel: N/A</div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Hyperparameters</legend>
+        <div class="row">
+          <div>
+            <label>Stride</label>
+            <input id="strideInp" type="number" min="1" step="1" value="1" />
+          </div>
+          <div>
+            <label>Dilation</label>
+            <input id="dilationInp" type="number" min="1" step="1" value="1" />
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label>Padding type</label>
+            <select id="padTypeSel">
+              <option value="pixels" selected>pixels</option>
+              <option value="same">same</option>
+              <option value="valid">valid</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label>Pixels</label>
+            <input id="padPxInp" type="number" min="0" step="1" value="0" />
+          </div>
+          <div>
+            <label>Pad mode</label>
+            <select id="padModeSel">
+              <option value="zeros" selected>zeros</option>
+              <option value="reflect">reflect</option>
+              <option value="replicate">replicate</option>
+              <option value="circular">circular</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="small">
+          Notes:
+          <ul style="margin:6px 0 0 18px; padding:0;">
+            <li><code>same</code> behaves like “zero-pad to keep size” (stride must be 1).</li>
+            <li><code>valid</code> means no padding.</li>
+            <li>Dilation spaces kernel elements without adding weights.</li>
+          </ul>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Actions</legend>
+        <button id="applyBtn">Apply Convolution</button>
+        <div style="height:8px;"></div>
+        <button id="focusViewportBtn">Focus in Viewport</button>
+      </fieldset>
+
+      <div class="status" id="status" role="status" aria-live="polite" aria-atomic="true">
+        Tip: mousewheel to zoom, drag to pan. Padding: pixels | same | valid.
+      </div>
+    </div>
+
+    <div class="view">
+      <div class="views">
+        <div class="panel">
+          <h3>Input <span id="inMeta"></span></h3>
+          <div class="canvasWrap"><canvas id="inCanvas"></canvas></div>
+          <div class="hint">Wheel = zoom · Drag = pan</div>
+        </div>
+        <div class="panel">
+          <h3>Output <span id="outMeta"></span></h3>
+          <div class="canvasWrap"><canvas id="outCanvas"></canvas></div>
+          <div class="hint">Wheel = zoom · Drag = pan</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  // -------------------------
+  // Utilities: kernels
+  // -------------------------
+  function assertOddPositive(k, name) {
+    if (!Number.isInteger(k) || k < 1 || (k % 2) === 0) {
+      throw new Error(`${name} size must be odd and >= 1`);
+    }
+  }
+
+  function gaussianKernel(k, sigma=null) {
+    assertOddPositive(k, "Gaussian");
+    if (sigma == null) sigma = 0.3 * (((k - 1) * 0.5) - 1) + 0.8;
+    const r = Math.floor(k / 2);
+    const ker = Array.from({length: k}, () => Array(k).fill(0));
+    let sum = 0;
+    for (let y = -r; y <= r; y++) {
+      for (let x = -r; x <= r; x++) {
+        const v = Math.exp(-(x*x + y*y) / (2 * sigma * sigma));
+        ker[y+r][x+r] = v;
+        sum += v;
+      }
+    }
+    for (let j = 0; j < k; j++) for (let i = 0; i < k; i++) ker[j][i] /= sum;
+    return ker;
+  }
+
+  function boxKernel(k) {
+    assertOddPositive(k, "Box");
+    const v = 1 / (k * k);
+    return Array.from({length: k}, () => Array(k).fill(v));
+  }
+
+  function identityKernel(k) {
+    assertOddPositive(k, "Identity");
+    const ker = Array.from({length: k}, () => Array(k).fill(0));
+    ker[Math.floor(k/2)][Math.floor(k/2)] = 1;
+    return ker;
+  }
+
+  // Presets (match your Python list)
+  const PRESETS = new Map([
+    ["Identity (3x3)", () => [[0,0,0],[0,1,0],[0,0,0]]],
+    ["Sharpen (3x3)", () => [[0,-1,0],[-1,7,-1],[0,-1,0]]],
+    ["Edge detect (Laplacian 3x3)", () => [[0,1,0],[1,-4,1],[0,1,0]]],
+    ["Edge detect (Laplacian 8-neigh)", () => [[1,1,1],[1,-8,1],[1,1,1]]],
+    ["Sobel X (3x3)", () => [[-1,0,1],[-2,0,2],[-1,0,1]]],
+    ["Sobel Y (3x3)", () => [[-1,-2,-1],[0,0,0],[1,2,1]]],
+    ["Gaussian blur (3x3)", () => gaussianKernel(3)],
+    ["Gaussian blur (5x5)", () => gaussianKernel(5)],
+    ["Gaussian blur (7x7)", () => gaussianKernel(7)],
+    ["Box blur (3x3)", () => boxKernel(3)],
+    ["Box blur (5x5)", () => boxKernel(5)],
+    ["Box blur (7x7)", () => boxKernel(7)],
+  ]);
+
+  function kernelSum(ker) {
+    let s = 0;
+    for (let j=0;j<ker.length;j++) for (let i=0;i<ker[0].length;i++) s += ker[j][i];
+    return s;
+  }
+
+  // -------------------------
+  // Kernel parser (NO eval)
+  // -------------------------
+  function parseKernel(text) {
+    const src = text.trim();
+    if (!src) throw new Error("Kernel box is empty.");
+
+    // Support gaussian(k), box(k), identity(k)
+    const m = src.match(/^(gaussian|box|identity)\s*\(\s*(\d+)\s*\)\s*$/i);
+    if (m) {
+      const fn = m[1].toLowerCase();
+      const k = parseInt(m[2], 10);
+      if (fn === "gaussian") return gaussianKernel(k);
+      if (fn === "box") return boxKernel(k);
+      if (fn === "identity") return identityKernel(k);
+    }
+
+    // Support matrix literal like [[...],[...]]
+    // We intentionally keep this strict-ish: must be JSON-like.
+    // Allow single spaces, trailing commas not allowed.
+    let jsonish = src;
+
+    // If user wrote something like "np.array(...)" from old habits:
+    jsonish = jsonish.replace(/^np\.array\s*\(/, "").replace(/\)\s*$/, "");
+    // If user wrote "1/9 * [[...]]" we won't support; keep simple for students.
+
+    let arr;
+    try {
+      arr = JSON.parse(jsonish);
+    } catch {
+      throw new Error(
+        "Could not parse kernel. Use a matrix literal like [[0,-1,0],[-1,5,-1],[0,-1,0]] " +
+        "or gaussian(k)/box(k)/identity(k)."
+      );
+    }
+
+    if (!Array.isArray(arr) || arr.length < 1 || !Array.isArray(arr[0])) {
+      throw new Error("Kernel must be a 2D array.");
+    }
+    const kh = arr.length;
+    const kw = arr[0].length;
+    if (kh < 1 || kw < 1) throw new Error("Kernel shape invalid.");
+    for (let r=0;r<kh;r++) {
+      if (!Array.isArray(arr[r]) || arr[r].length !== kw) {
+        throw new Error("Kernel rows must have equal length.");
+      }
+      for (let c=0;c<kw;c++) {
+        const v = Number(arr[r][c]);
+        if (!Number.isFinite(v)) throw new Error("Kernel entries must be numbers.");
+        arr[r][c] = v;
+      }
+    }
+    return arr;
+  }
+
+  // -------------------------
+  // Image helpers (Canvas <-> Float arrays)
+  // -------------------------
+  function makeCheckerboard(w, h, cell) {
+    const canvas = document.createElement("canvas");
+    canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    const img = ctx.createImageData(w, h);
+    for (let y=0;y<h;y++) {
+      for (let x=0;x<w;x++) {
+        const idx = (y*w + x) * 4;
+        const v = (((Math.floor(x/cell) + Math.floor(y/cell)) % 2) === 0) ? 255 : 64;
+        img.data[idx+0] = v;
+        img.data[idx+1] = v;
+        img.data[idx+2] = v;
+        img.data[idx+3] = 255;
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+    return canvas;
+  }
+
+  function imageDataToFloatCHW(imgData, grayscale=false) {
+    const {width: W, height: H, data} = imgData;
+    if (grayscale) {
+      const out = new Float32Array(H * W * 1);
+      for (let i=0;i<H*W;i++) {
+        const r = data[i*4+0], g = data[i*4+1], b = data[i*4+2];
+        // standard luma-ish
+        out[i] = 0.299*r + 0.587*g + 0.114*b;
+      }
+      return {H, W, C: 1, x: out};
+    } else {
+      const out = new Float32Array(H * W * 3);
+      for (let i=0;i<H*W;i++) {
+        out[i*3+0] = data[i*4+0];
+        out[i*3+1] = data[i*4+1];
+        out[i*3+2] = data[i*4+2];
+      }
+      return {H, W, C: 3, x: out};
+    }
+  }
+
+  function floatCHWToImageData(obj, rescale=false) {
+    const {H, W, C, x} = obj;
+    const img = new ImageData(W, H);
+
+    // Auto-rescale per channel like your Python version (only if needed)
+    let y = x;
+    if (rescale) {
+      y = new Float32Array(x.length);
+      for (let c=0;c<C;c++) {
+        let lo = Infinity, hi = -Infinity;
+        for (let i=0;i<H*W;i++) {
+          const v = x[i*C + c];
+          if (v < lo) lo = v;
+          if (v > hi) hi = v;
+        }
+        if (hi === lo) {
+          for (let i=0;i<H*W;i++) y[i*C + c] = 0;
+        } else if (lo >= 0 && hi <= 255) {
+          for (let i=0;i<H*W;i++) y[i*C + c] = x[i*C + c];
+        } else {
+          const s = 255.0 / (hi - lo);
+          for (let i=0;i<H*W;i++) y[i*C + c] = (x[i*C + c] - lo) * s;
+        }
+      }
+    }
+
+    for (let i=0;i<H*W;i++) {
+      if (C === 1) {
+        const v = clamp255(y[i]);
+        img.data[i*4+0] = v;
+        img.data[i*4+1] = v;
+        img.data[i*4+2] = v;
+        img.data[i*4+3] = 255;
+      } else {
+        img.data[i*4+0] = clamp255(y[i*3+0]);
+        img.data[i*4+1] = clamp255(y[i*3+1]);
+        img.data[i*4+2] = clamp255(y[i*3+2]);
+        img.data[i*4+3] = 255;
+      }
+    }
+    return img;
+  }
+
+  function clamp255(v) {
+    v = Math.round(v);
+    if (v < 0) return 0;
+    if (v > 255) return 255;
+    return v;
+  }
+
+  // -------------------------
+  // Padding sampling
+  // -------------------------
+  function reflectIndex(i, n) {
+    // reflect without repeating edge: ... 2 1 0 1 2 3 2 1 ...
+    // Handles i outside [0,n-1]
+    while (i < 0 || i >= n) {
+      if (i < 0) i = -i;              // -1 -> 1, -2 -> 2
+      if (i >= n) i = (2*n - 2) - i;  // n -> n-2, n+1 -> n-3
+      // If n==1, special-case:
+      if (n === 1) return 0;
+    }
+    return i;
+  }
+
+  function circularIndex(i, n) {
+    let r = i % n;
+    if (r < 0) r += n;
+    return r;
+  }
+
+  function samplePixel(input, H, W, C, y, x, c, padMode) {
+    // input is Float32Array in H*W*C with interleaved channels per pixel
+    if (0 <= y && y < H && 0 <= x && x < W) {
+      return input[(y*W + x)*C + c];
+    }
+    if (padMode === "zeros") return 0;
+
+    let yy = y, xx = x;
+    if (padMode === "replicate") {
+      yy = Math.min(H-1, Math.max(0, yy));
+      xx = Math.min(W-1, Math.max(0, xx));
+    } else if (padMode === "reflect") {
+      yy = reflectIndex(yy, H);
+      xx = reflectIndex(xx, W);
+    } else if (padMode === "circular") {
+      yy = circularIndex(yy, H);
+      xx = circularIndex(xx, W);
+    } else {
+      return 0;
+    }
+    return input[(yy*W + xx)*C + c];
+  }
+
+  // -------------------------
+  // Convolution core (depthwise)
+  // -------------------------
+  function conv2dDepthwise(inputObj, kernel, stride, paddingType, paddingPixels, padMode, dilation=1) {
+    const {H, W, C, x} = inputObj;
+    const kh = kernel.length;
+    const kw = kernel[0].length;
+
+    if (!Number.isInteger(stride) || stride < 1) throw new Error("Stride must be >= 1");
+    if (!Number.isInteger(dilation) || dilation < 1) throw new Error("Dilation must be >= 1");
+    if (kh < 1 || kw < 1) throw new Error("Kernel shape invalid.");
+
+    const effectiveKh = dilation * (kh - 1) + 1;
+    const effectiveKw = dilation * (kw - 1) + 1;
+
+    let padTop=0, padLeft=0, padBottom=0, padRight=0;
+
+    if (paddingType === "pixels") {
+      const p = paddingPixels;
+      if (!Number.isInteger(p) || p < 0) throw new Error("Padding pixels must be >= 0");
+      padTop = padBottom = padLeft = padRight = p;
+    } else if (paddingType === "valid") {
+      // no padding
+    } else if (paddingType === "same") {
+      if (stride !== 1) throw new Error("padding='same' only supports stride=1 in this demo (matches PyTorch constraint).");
+      const totalPadH = effectiveKh - 1;
+      const totalPadW = effectiveKw - 1;
+      padTop = Math.floor(totalPadH / 2);
+      padBottom = totalPadH - padTop;
+      padLeft = Math.floor(totalPadW / 2);
+      padRight = totalPadW - padLeft;
+    } else {
+      throw new Error("Unknown padding type");
+    }
+
+    const outH = Math.floor((H + padTop + padBottom - effectiveKh) / stride) + 1;
+    const outW = Math.floor((W + padLeft + padRight - effectiveKw) / stride) + 1;
+    if (outH <= 0 || outW <= 0) throw new Error("Output shape is empty. Try smaller kernel/padding or different padding type.");
+
+    const out = new Float32Array(outH * outW * C);
+    for (let oy=0; oy<outH; oy++) {
+      for (let ox=0; ox<outW; ox++) {
+        for (let c=0; c<C; c++) {
+          let acc = 0;
+          for (let kj=0; kj<kh; kj++) {
+            for (let ki=0; ki<kw; ki++) {
+              const iy = oy*stride - padTop + kj*dilation;
+              const ix = ox*stride - padLeft + ki*dilation;
+              const v = samplePixel(x, H, W, C, iy, ix, c, padMode);
+              acc += v * kernel[kj][ki];
+            }
+          }
+          out[(oy*outW + ox)*C + c] = acc;
+        }
+      }
+    }
+
+    return {H: outH, W: outW, C, x: out};
+  }
+
+  // -------------------------
+  // Zoom/Pan viewer for a canvas
+  // -------------------------
+  class CanvasViewer {
+    constructor(canvas, viewport, onViewportChange) {
+      this.canvas = canvas;
+      this.ctx = canvas.getContext("2d");
+      this.baseImageData = null; // ImageData
+      this.viewport = viewport;
+      this.onViewportChange = onViewportChange;
+      this.minScale = 0.1;
+      this.maxScale = 16.0;
+      this.dragging = false;
+      this.lastX = 0;
+      this.lastY = 0;
+
+      const resizeObserver = new ResizeObserver(() => this.draw());
+      resizeObserver.observe(canvas);
+
+      canvas.addEventListener("wheel", (e) => {
+        e.preventDefault();
+        const factor = (e.deltaY < 0) ? 1.1 : (1/1.1);
+        this.viewport.scale = Math.max(this.minScale, Math.min(this.maxScale, this.viewport.scale * factor));
+        this.onViewportChange();
+      }, {passive:false});
+
+      canvas.addEventListener("mousedown", (e) => {
+        this.dragging = true;
+        this.lastX = e.clientX;
+        this.lastY = e.clientY;
+      });
+      window.addEventListener("mousemove", (e) => {
+        if (!this.dragging) return;
+        this.viewport.offsetX += (e.clientX - this.lastX);
+        this.viewport.offsetY += (e.clientY - this.lastY);
+        this.lastX = e.clientX;
+        this.lastY = e.clientY;
+        this.onViewportChange();
+      });
+      window.addEventListener("mouseup", () => { this.dragging = false; });
+    }
+
+    setImageData(imgData) {
+      this.baseImageData = imgData;
+      this.draw();
+    }
+
+    draw() {
+      const c = this.canvas;
+      const ctx = this.ctx;
+
+      // Handle HiDPI
+      const rect = c.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      const w = Math.max(1, Math.floor(rect.width * dpr));
+      const h = Math.max(1, Math.floor(rect.height * dpr));
+      if (c.width !== w || c.height !== h) {
+        c.width = w; c.height = h;
+      }
+
+      ctx.clearRect(0,0,c.width,c.height);
+
+      if (!this.baseImageData) return;
+
+      // Draw scaled ImageData via offscreen canvas
+      const off = document.createElement("canvas");
+      off.width = this.baseImageData.width;
+      off.height = this.baseImageData.height;
+      off.getContext("2d").putImageData(this.baseImageData, 0, 0);
+
+      const dispW = Math.max(1, Math.floor(off.width * this.viewport.scale * dpr));
+      const dispH = Math.max(1, Math.floor(off.height * this.viewport.scale * dpr));
+
+      const cx = Math.floor(c.width / 2);
+      const cy = Math.floor(c.height / 2);
+      const x = cx + Math.floor(this.viewport.offsetX * dpr) - Math.floor(dispW / 2);
+      const y = cy + Math.floor(this.viewport.offsetY * dpr) - Math.floor(dispH / 2);
+
+      ctx.imageSmoothingEnabled = true;
+      ctx.drawImage(off, x, y, dispW, dispH);
+    }
+  }
+
+  // -------------------------
+  // App state + wiring
+  // -------------------------
+  const els = {
+    fileInput: document.getElementById("fileInput"),
+    sampleButtons: [...document.querySelectorAll("[data-sample]")],
+    checkerBtn: document.getElementById("checkerBtn"),
+    saveBtn: document.getElementById("saveBtn"),
+    grayChk: document.getElementById("grayChk"),
+    presetSel: document.getElementById("presetSel"),
+    presetInfo: document.getElementById("presetInfo"),
+    kernelText: document.getElementById("kernelText"),
+    kinfo: document.getElementById("kinfo"),
+    strideInp: document.getElementById("strideInp"),
+    dilationInp: document.getElementById("dilationInp"),
+    padTypeSel: document.getElementById("padTypeSel"),
+    padPxInp: document.getElementById("padPxInp"),
+    padModeSel: document.getElementById("padModeSel"),
+    applyBtn: document.getElementById("applyBtn"),
+    focusViewportBtn: document.getElementById("focusViewportBtn"),
+    status: document.getElementById("status"),
+    inCanvas: document.getElementById("inCanvas"),
+    outCanvas: document.getElementById("outCanvas"),
+    inMeta: document.getElementById("inMeta"),
+    outMeta: document.getElementById("outMeta"),
+  };
+
+  // Populate presets dropdown
+  for (const name of PRESETS.keys()) {
+    const opt = document.createElement("option");
+    opt.value = name;
+    opt.textContent = name;
+    els.presetSel.appendChild(opt);
+  }
+
+  const viewport = {scale: 1, offsetX: 0, offsetY: 0};
+  let inputViewer;
+  let outputViewer;
+
+  function drawViewers() {
+    inputViewer.draw();
+    outputViewer.draw();
+  }
+
+  inputViewer = new CanvasViewer(els.inCanvas, viewport, drawViewers);
+  outputViewer = new CanvasViewer(els.outCanvas, viewport, drawViewers);
+
+  function focusViewport() {
+    const viewers = [inputViewer, outputViewer].filter(viewer => viewer.baseImageData);
+    if (viewers.length === 0) return;
+    viewport.scale = Math.min(...viewers.map(viewer => {
+      const rect = viewer.canvas.getBoundingClientRect();
+      return Math.min(rect.width / viewer.baseImageData.width, rect.height / viewer.baseImageData.height) * 0.94;
+    }));
+    viewport.offsetX = 0;
+    viewport.offsetY = 0;
+    drawViewers();
+  }
+
+  const state = {
+    inputImageData: null,
+    inputFloat: null,
+    outputImageData: null,
+    outputFloat: null,
+    lastFilename: null
+  };
+
+  function setStatus(msg, isError=false) {
+    els.status.innerHTML = isError ? `<span class="danger">${escapeHtml(msg)}</span>` : escapeHtml(msg);
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+
+  function updateMeta() {
+    if (state.inputFloat) {
+      els.inMeta.textContent = `${state.inputFloat.W}×${state.inputFloat.H}×${state.inputFloat.C}`;
+    } else els.inMeta.textContent = "";
+    if (state.outputFloat) {
+      els.outMeta.textContent = `${state.outputFloat.W}×${state.outputFloat.H}×${state.outputFloat.C}`;
+    } else els.outMeta.textContent = "";
+  }
+
+  function rebuildInputFromImageData() {
+    if (!state.inputImageData) return;
+    const gray = els.grayChk.checked;
+    state.inputFloat = imageDataToFloatCHW(state.inputImageData, gray);
+    inputViewer.setImageData(floatCHWToImageData(state.inputFloat, /*rescale*/ false));
+    state.outputImageData = null;
+    state.outputFloat = null;
+    outputViewer.setImageData(null);
+    updateMeta();
+    requestAnimationFrame(focusViewport);
+  }
+
+  let imageLoadId = 0;
+
+  function markSample(filename) {
+    for (const button of els.sampleButtons) {
+      button.setAttribute("aria-pressed", String(button.dataset.sample === filename));
+    }
+  }
+
+  function loadDefault() {
+    imageLoadId++;
+    const checker = makeCheckerboard(256, 256, 32);
+    const ctx = checker.getContext("2d");
+    state.inputImageData = ctx.getImageData(0,0,checker.width, checker.height);
+    state.lastFilename = "checkerboard.png";
+    els.fileInput.value = "";
+    markSample(null);
+    rebuildInputFromImageData();
+    setStatus("Loaded: generated checkerboard");
+  }
+
+  // Handle preset selection
+  els.presetSel.addEventListener("change", () => {
+    const name = els.presetSel.value;
+    if (!PRESETS.has(name)) {
+      els.presetInfo.textContent = "Preset: N/A";
+      return;
+    }
+    try {
+      const ker = PRESETS.get(name)();
+      els.kernelText.value = JSON.stringify(ker);
+      els.presetInfo.textContent = `Preset: ${name} | shape: ${ker.length}×${ker[0].length} | sum: ${kernelSum(ker).toFixed(4)}`;
+      setKernelInfo(ker);
+    } catch (e) {
+      setStatus(String(e), true);
+    }
+  });
+
+  function setKernelInfo(ker) {
+    els.kinfo.textContent = `Kernel shape: ${ker.length}×${ker[0].length}\nSum: ${kernelSum(ker).toFixed(6)}`;
+  }
+
+  function updateHyperparameterControls() {
+    const t = els.padTypeSel.value;
+    els.padPxInp.disabled = (t !== "pixels");
+    els.padModeSel.disabled = (t === "valid");
+    els.strideInp.disabled = (t === "same");
+    if (t === "same") els.strideInp.value = "1";
+  }
+
+  els.padTypeSel.addEventListener("change", updateHyperparameterControls);
+
+  // Samples and uploads use the same decoding and canvas pipeline.
+  // Ignore older loads if the student chooses another image before decoding finishes.
+  function loadImage(source, filename, isUpload=false) {
+    const loadId = ++imageLoadId;
+    setStatus(`Loading: ${filename}…`);
+    const img = new Image();
+    const release = () => { if (isUpload) URL.revokeObjectURL(source); };
+    img.onload = () => {
+      try {
+        if (loadId !== imageLoadId) return;
+        const tmp = document.createElement("canvas");
+        tmp.width = img.naturalWidth;
+        tmp.height = img.naturalHeight;
+        const ctx = tmp.getContext("2d");
+        ctx.drawImage(img, 0, 0);
+        state.inputImageData = ctx.getImageData(0,0,tmp.width,tmp.height);
+        state.lastFilename = filename;
+        markSample(isUpload ? null : filename);
+        rebuildInputFromImageData();
+        setStatus(`Loaded: ${filename}`);
+      } catch (e) {
+        setStatus(`Could not read ${filename}. Choose another image. ${e.message}`, true);
+      } finally {
+        release();
+      }
+    };
+    img.onerror = () => {
+      release();
+      if (loadId === imageLoadId) {
+        setStatus(`Could not load ${filename}. Try the sample again or upload a PNG or JPEG image.`, true);
+      }
+    };
+    img.src = source;
+  }
+
+  for (const button of els.sampleButtons) {
+    button.addEventListener("click", () => {
+      els.fileInput.value = "";
+      loadImage(button.dataset.sample, button.dataset.sample);
+    });
+  }
+  els.checkerBtn.addEventListener("click", loadDefault);
+
+  els.fileInput.addEventListener("change", () => {
+    const f = els.fileInput.files && els.fileInput.files[0];
+    if (!f) return;
+    // Allow selecting the same file again, including after a decoding error.
+    els.fileInput.value = "";
+    try {
+      loadImage(URL.createObjectURL(f), f.name, true);
+    } catch (e) {
+      setStatus(String(e), true);
+    }
+  });
+
+  // Grayscale toggle
+  els.grayChk.addEventListener("change", () => {
+    rebuildInputFromImageData();
+    setStatus("Rebuilt input (grayscale toggle)");
+  });
+
+  // Apply convolution
+  els.applyBtn.addEventListener("click", () => {
+    if (!state.inputFloat) {
+      setStatus("No image. Load an input image first.", true);
+      return;
+    }
+    try {
+      const ker = parseKernel(els.kernelText.value);
+      setKernelInfo(ker);
+
+      const stride = parseInt(els.strideInp.value, 10);
+      const dilation = parseInt(els.dilationInp.value, 10);
+      const padType = els.padTypeSel.value;
+      const padPx = (padType === "pixels") ? parseInt(els.padPxInp.value, 10) : 0;
+      const padMode = els.padModeSel.value;
+
+      const outFloat = conv2dDepthwise(state.inputFloat, ker, stride, padType, padPx, padMode, dilation);
+
+      // Auto-rescale for display
+      const outImg = floatCHWToImageData(outFloat, /*rescale*/ true);
+
+      state.outputFloat = outFloat;
+      state.outputImageData = outImg;
+      outputViewer.setImageData(outImg);
+      updateMeta();
+
+      setStatus(`Applied: kernel ${ker.length}×${ker[0].length}, stride=${stride}, dilation=${dilation}, padding=${padType}${padType==="pixels" ? "=" + padPx : ""}${padType!=="valid" ? " (" + padMode + ")" : ""}`);
+    } catch (e) {
+      setStatus(String(e), true);
+    }
+  });
+
+  els.focusViewportBtn.addEventListener("click", focusViewport);
+
+  // Save output
+  els.saveBtn.addEventListener("click", () => {
+    if (!state.outputImageData) {
+      setStatus("Nothing to save. Run a convolution first.", true);
+      return;
+    }
+    // Put output into a real canvas at native resolution
+    const c = document.createElement("canvas");
+    c.width = state.outputImageData.width;
+    c.height = state.outputImageData.height;
+    c.getContext("2d").putImageData(state.outputImageData, 0, 0);
+
+    c.toBlob((blob) => {
+      if (!blob) { setStatus("Failed to export PNG.", true); return; }
+      const a = document.createElement("a");
+      const base = (state.lastFilename || "output.png").replace(/\.[^.]+$/, "");
+      a.download = `${base}_conv.png`;
+      a.href = URL.createObjectURL(blob);
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+      setStatus(`Saved: ${a.download}`);
+    }, "image/png");
+  });
+
+  // Initialize
+  updateHyperparameterControls();
+  loadDefault();
+  loadImage("4-conv_bell.jpg", "4-conv_bell.jpg");
+
+  // Initialize kernel info
+  try {
+    const ker0 = parseKernel(els.kernelText.value);
+    setKernelInfo(ker0);
+  } catch {
+    // ignore
+  }
+})();
+</script>
+</body>
+</html>

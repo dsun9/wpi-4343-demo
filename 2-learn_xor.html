@@ -1,0 +1,1236 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A manual XOR neural network lab for deep learning courses.">
+  <title>Learning XOR</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b1017;
+      --panel: #111923;
+      --panel-strong: #151f2b;
+      --panel-soft: #0f161f;
+      --line: #2a3848;
+      --line-bright: #3c4e63;
+      --text: #edf3f8;
+      --muted: #93a4b6;
+      --faint: #617284;
+      --blue: #59b9ed;
+      --blue-deep: #245b77;
+      --amber: #f0b65e;
+      --amber-deep: #7b5523;
+      --green: #55d39a;
+      --green-deep: #1f6448;
+      --red: #f27677;
+      --red-deep: #773b43;
+      --violet: #b6a3ff;
+      --shadow: rgba(0, 0, 0, 0.22);
+      --control-hover: #1a2937;
+      --control-active: #202f3d;
+      --step-hover: #2a251b;
+      --input-bg: #132331;
+      --grid: #1a2633;
+      --node: #182432;
+      --node-active: #1b3445;
+      --node-success: #183529;
+      --node-failure: #382226;
+      --row-hover: #182532;
+      --row-active: #192d3b;
+      --knob-shell: #0c131c;
+      --knob-disc: #1e2a37;
+      --knob-border: #52657a;
+      --knob-track: #34475a;
+      --knob-highlight: #72879a;
+      --radius: 8px;
+      --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    :root[data-theme="light"] {
+      color-scheme: light;
+      --bg: #f2f4f6;
+      --panel: #ffffff;
+      --panel-strong: #f3f5f7;
+      --panel-soft: #f8fafb;
+      --line: #d5dce3;
+      --line-bright: #a8b4c0;
+      --text: #17212b;
+      --muted: #526477;
+      --faint: #718195;
+      --blue: #0878ad;
+      --blue-deep: #8bbbd1;
+      --amber: #9a5b00;
+      --amber-deep: #d7b36d;
+      --green: #147b54;
+      --green-deep: #9bcdb8;
+      --red: #b73542;
+      --red-deep: #dfadb3;
+      --violet: #6c51b5;
+      --shadow: rgba(29, 44, 58, 0.1);
+      --control-hover: #e8edf1;
+      --control-active: #dfe6eb;
+      --step-hover: #f4ead8;
+      --input-bg: #ffffff;
+      --grid: #e8edf1;
+      --node: #f4f7f9;
+      --node-active: #e6f3f9;
+      --node-success: #e8f5ef;
+      --node-failure: #faecee;
+      --row-hover: #edf4f8;
+      --row-active: #e2f1f8;
+      --knob-shell: #f5f7f9;
+      --knob-disc: #e5ebf0;
+      --knob-border: #77899a;
+      --knob-track: #c0cad3;
+      --knob-highlight: #ffffff;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { min-width: 320px; background: var(--bg); }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      letter-spacing: 0;
+    }
+
+    button, input, select { font: inherit; }
+
+    button, select, input[type="number"] { color: var(--text); }
+
+    button {
+      border: 1px solid var(--line-bright);
+      border-radius: 6px;
+      background: var(--panel-strong);
+      cursor: pointer;
+      min-height: 36px;
+      padding: 0 12px;
+      transition: border-color 140ms ease, background-color 140ms ease, color 140ms ease;
+    }
+
+    button:hover { border-color: var(--blue); background: var(--control-hover); }
+    button:active { background: var(--control-active); }
+    button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+
+    .app-shell {
+      width: min(1480px, calc(100% - 40px));
+      margin: 0 auto;
+      padding: 24px 0 28px;
+    }
+
+    .topbar {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      padding: 0 0 22px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .eyebrow {
+      margin: 0 0 4px;
+      color: var(--blue);
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { margin-bottom: 0; font-size: clamp(20px, 2.4vw, 28px); line-height: 1.1; letter-spacing: 0; }
+    h2 { margin-bottom: 0; font-size: 16px; line-height: 1.2; }
+    h3 { margin-bottom: 0; font-size: 12px; line-height: 1.2; }
+
+    .top-controls { display: flex; align-items: center; justify-content: center; width: 100%; gap: 10px; flex-wrap: wrap; }
+
+    .field-inline, .check-inline {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .field-inline select {
+      min-height: 36px;
+      border: 1px solid var(--line-bright);
+      border-radius: 6px;
+      padding: 0 30px 0 10px;
+      background: var(--panel-strong);
+    }
+
+    .check-inline input { accent-color: var(--blue); }
+
+    .button-secondary { color: var(--muted); }
+    .button-step { border-color: var(--amber-deep); color: var(--amber); }
+    .button-step:hover { border-color: var(--amber); background: var(--step-hover); }
+    .theme-toggle { min-width: 98px; }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 1.3fr) minmax(460px, 0.82fr);
+      align-items: start;
+      gap: 16px;
+      padding-top: 20px;
+    }
+
+    .panel {
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      box-shadow: 0 16px 42px var(--shadow);
+    }
+
+    .network-panel, .results-panel { padding: 20px; }
+
+    .panel-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .panel-title { margin-bottom: 6px; }
+    .panel-note { max-width: 610px; margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+
+    .formula-strip {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      flex: 0 0 auto;
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      padding: 9px 10px;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 11px;
+      white-space: nowrap;
+    }
+
+    .formula-strip strong { color: var(--text); font-weight: 600; }
+    .formula-arrow { color: var(--faint); }
+
+    .stage-frame {
+      position: relative;
+      overflow: hidden;
+      width: min(100%, 1100px);
+      min-height: 620px;
+      margin: 0 auto;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--panel-soft);
+    }
+
+    .stage-frame svg { display: block; width: 100%; height: auto; min-height: 620px; }
+
+    .stage-caption {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+      padding: 10px 12px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 11px;
+    }
+
+    .stage-caption strong { color: var(--text); font-weight: 500; }
+
+    .stage-canvas {
+      position: relative;
+      min-height: 600px;
+      aspect-ratio: 850 / 620;
+    }
+
+    .stage-canvas svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+    }
+
+    .connection-controls { position: absolute; inset: 0; pointer-events: none; }
+
+    .input-selectors { position: absolute; inset: 0; pointer-events: none; }
+
+    .node-input-control {
+      position: absolute;
+      top: var(--y);
+      left: var(--x);
+      pointer-events: auto;
+      transform: translate(-50%, -50%);
+    }
+
+    .node-input-control select {
+      width: 38px;
+      height: 22px;
+      border: 1px solid var(--blue-deep);
+      border-radius: 4px;
+      padding: 0 2px 0 5px;
+      background: var(--input-bg);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 11px;
+      line-height: 1;
+    }
+
+    .connection-control {
+      position: absolute;
+      top: var(--y);
+      left: var(--x);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transform: translate(-50%, -50%);
+      color: var(--amber);
+      font-family: var(--mono);
+      pointer-events: auto;
+      user-select: none;
+    }
+
+    .connection-name { font-size: 14px; font-weight: 700; }
+    .connection-value { min-width: 46px; color: var(--muted); font-size: 14px; font-weight: 600; text-align: right; }
+
+    .connection-control .knob-box { width: 48px; height: 48px; cursor: ns-resize; touch-action: none; }
+    .connection-control .knob-disc { --knob-center: 16px; width: 32px; height: 32px; }
+    .connection-control .gradient-slot { width: 22px; min-height: 28px; }
+    .connection-control .gradient-arrow { font-size: var(--arrow-size, 12px); }
+    .gradient-flat { color: var(--faint); font-size: 10px; }
+
+    .svg-grid-line { stroke: var(--grid); stroke-width: 1; }
+    .svg-edge { fill: none; stroke-linecap: round; transition: stroke 140ms ease, stroke-width 140ms ease, opacity 140ms ease; }
+    .svg-edge-label { fill: var(--muted); font-family: var(--mono); font-size: 14px; font-weight: 600; text-anchor: middle; }
+    .svg-edge-label.positive { fill: var(--blue); }
+    .svg-edge-label.negative { fill: var(--red); }
+    .svg-node-body { fill: var(--node); stroke: var(--line-bright); stroke-width: 2; transition: fill 140ms ease, stroke 140ms ease; }
+    .svg-node-body.active { fill: var(--node-active); stroke: var(--blue); }
+    .svg-node-body.success { fill: var(--node-success); stroke: var(--green); }
+    .svg-node-body.failure { fill: var(--node-failure); stroke: var(--red); }
+    .svg-node-tag { fill: var(--text); font-family: var(--mono); font-size: 15px; font-weight: 700; text-anchor: middle; }
+    .svg-node-sub { fill: var(--muted); font-family: var(--mono); font-size: 10px; text-anchor: middle; }
+    .svg-node-value { fill: var(--text); font-family: var(--mono); font-size: 14px; font-weight: 600; text-anchor: middle; }
+    .svg-node-kicker { fill: var(--faint); font-family: var(--mono); font-size: 9px; letter-spacing: 0.08em; text-anchor: middle; text-transform: uppercase; }
+    .svg-bias-line { stroke: var(--amber); stroke-width: 1.5; stroke-dasharray: 3 4; }
+    .svg-bias-label { fill: var(--amber); font-family: var(--mono); font-size: 13px; font-weight: 600; }
+    .svg-input-dot { fill: var(--blue); }
+    .svg-output-dot { fill: var(--green); }
+
+    .stage-legend {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px 16px;
+      padding: 10px 12px 0;
+      color: var(--faint);
+      font-size: 11px;
+    }
+
+    .legend-item { display: inline-flex; align-items: center; gap: 6px; }
+    .legend-swatch { display: inline-block; width: 20px; height: 3px; border-radius: 2px; background: var(--blue); }
+    .legend-swatch.negative { background: var(--red); }
+    .legend-swatch.bias { background: var(--amber); }
+    .legend-swatch.success { width: auto; height: auto; color: var(--green); background: none; font-size: 15px; line-height: 1; }
+
+    .parameter-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 20px 0 10px;
+    }
+
+    .parameter-header span { color: var(--faint); font-family: var(--mono); font-size: 10px; }
+
+    .parameter-groups { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+
+    .parameter-group {
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 12px;
+      background: var(--panel-soft);
+    }
+
+    .parameter-group-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 11px; }
+    .parameter-group-header h3 { color: var(--text); font-family: var(--mono); font-weight: 600; }
+    .parameter-group-header span { color: var(--faint); font-family: var(--mono); font-size: 10px; }
+
+    .parameter-control + .parameter-control { margin-top: 10px; }
+
+    .parameter-line { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 5px; }
+    .parameter-name { color: var(--amber); font-family: var(--mono); font-size: 11px; }
+    .parameter-value { color: var(--muted); font-family: var(--mono); font-size: 10px; }
+
+    .knob-row { display: grid; grid-template-columns: 44px 24px minmax(62px, 1fr); align-items: center; gap: 6px; }
+
+    .knob-box {
+      --knob-sweep: 135deg;
+      --knob-active: var(--amber);
+      position: relative;
+      display: grid;
+      place-items: center;
+      width: 44px;
+      height: 44px;
+      border: 1px solid var(--line-bright);
+      border-radius: 50%;
+      background: var(--knob-shell);
+      box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--knob-highlight) 9%, transparent), 0 2px 5px var(--shadow);
+      transition: border-color 120ms ease, box-shadow 120ms ease, transform 120ms ease;
+    }
+
+    .knob-box::before {
+      content: "";
+      position: absolute;
+      inset: 3px;
+      border-radius: 50%;
+      background: conic-gradient(from 225deg, var(--knob-active) 0deg var(--knob-sweep), var(--knob-track) var(--knob-sweep) 270deg, transparent 270deg 360deg);
+      -webkit-mask: radial-gradient(circle, transparent 63%, #000 65% 72%, transparent 74%);
+      mask: radial-gradient(circle, transparent 63%, #000 65% 72%, transparent 74%);
+      pointer-events: none;
+    }
+
+    .knob-box::after {
+      content: "";
+      position: absolute;
+      bottom: 4px;
+      left: 50%;
+      width: 5px;
+      height: 2px;
+      border-radius: 99px;
+      background: var(--line-bright);
+      transform: translateX(-50%);
+      pointer-events: none;
+    }
+
+    .knob-box:hover { border-color: var(--knob-highlight); transform: translateY(-1px); }
+    .knob-box:focus-within { border-color: var(--blue); box-shadow: 0 0 0 2px rgba(89, 185, 237, 0.22), 0 3px 7px var(--shadow); }
+    .connection-control.dragging { z-index: 20; }
+    .connection-control.dragging .knob-box { border-color: var(--knob-active); box-shadow: 0 0 0 3px color-mix(in srgb, var(--knob-active) 22%, transparent), 0 5px 10px var(--shadow); transform: translateY(-1px) scale(1.035); }
+
+    .knob-disc { --knob-center: 14.5px; position: relative; display: grid; place-items: center; width: 29px; height: 29px; border: 1px solid var(--knob-border); border-radius: 50%; background: var(--knob-disc); box-shadow: inset 0 1px 1px color-mix(in srgb, var(--knob-highlight) 25%, transparent), inset 0 -3px 5px color-mix(in srgb, var(--knob-shell) 60%, transparent); pointer-events: none; }
+    .knob-disc::after { content: ""; position: absolute; width: 4px; height: 4px; border: 1px solid var(--knob-shell); border-radius: 50%; background: var(--knob-active); }
+    .knob-indicator-anchor { position: absolute; inset: 0; transform-origin: 50% 50%; }
+    .knob-indicator { position: absolute; top: 3px; bottom: 50%; left: 50%; width: 2px; border-radius: 999px; background: var(--knob-active); box-shadow: 0 0 4px color-mix(in srgb, var(--knob-active) 55%, transparent); transform: translateX(-50%); }
+    .knob-range { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; pointer-events: none; }
+
+    .knob-feedback {
+      position: absolute;
+      bottom: calc(100% + 7px);
+      left: 50%;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      min-width: max-content;
+      padding: 5px 7px;
+      border: 1px solid var(--line-bright);
+      border-radius: 4px;
+      background: var(--panel-strong);
+      box-shadow: 0 5px 14px var(--shadow);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 11px;
+      line-height: 1;
+      opacity: 0;
+      pointer-events: none;
+      transform: translate(-50%, 4px);
+      transition: opacity 100ms ease, transform 100ms ease;
+    }
+
+    .knob-feedback::after { content: ""; position: absolute; top: 100%; left: 50%; width: 6px; height: 6px; border-right: 1px solid var(--line-bright); border-bottom: 1px solid var(--line-bright); background: var(--panel-strong); transform: translate(-50%, -3px) rotate(45deg); }
+    .connection-control.dragging .knob-feedback { opacity: 1; transform: translate(-50%, 0); }
+    .knob-help { color: var(--faint); }
+    .knob-help kbd { border: 1px solid var(--line-bright); border-bottom-width: 2px; border-radius: 3px; padding: 1px 4px; background: var(--panel-strong); color: var(--muted); font: inherit; font-size: 9px; }
+
+    .gradient-slot { display: grid; place-items: center; width: 24px; min-height: 30px; }
+    .gradient-arrow { display: inline-block; color: var(--violet); font-family: var(--mono); font-size: var(--arrow-size, 15px); font-weight: 700; line-height: 1; transform: translateY(var(--arrow-offset, 0px)); }
+    .gradient-arrow.muted { color: var(--faint); opacity: 0.6; }
+
+    .number-input {
+      width: 100%;
+      min-width: 0;
+      height: 30px;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      padding: 0 6px;
+      background: #0c131c;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 11px;
+      text-align: right;
+    }
+
+    .results-panel { min-height: auto; align-self: center; }
+    .results-head-note { color: var(--faint); font-family: var(--mono); font-size: 10px; white-space: nowrap; }
+
+    .table-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--panel-soft); }
+    .truth-table { width: 100%; min-width: 470px; table-layout: fixed; border-collapse: collapse; font-family: var(--mono); font-size: 14px; font-weight: 600; }
+    .truth-table th, .truth-table td { overflow: hidden; padding: 13px 6px; border-bottom: 1px solid var(--line); text-align: right; text-overflow: clip; white-space: nowrap; }
+    .truth-table th { color: var(--faint); font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+    .truth-table th:first-child, .truth-table td:first-child { padding-left: 12px; text-align: left; }
+    .truth-table tr:last-child td { border-bottom: 0; }
+    .truth-table tbody tr { cursor: pointer; transition: background-color 140ms ease; }
+    .truth-table tbody tr:hover, .truth-table tbody tr:focus { background: var(--row-hover); outline: none; }
+    .truth-table tbody tr.active { background: var(--row-active); box-shadow: inset 3px 0 0 var(--blue); }
+    .truth-table .muted-cell { color: var(--muted); }
+    .truth-table .prediction { color: var(--text); font-weight: 700; }
+    .truth-table .result-cell { display: inline-flex; align-items: center; justify-content: flex-end; gap: 6px; min-width: 0; }
+    .truth-table .result-mark { font-size: 16px; font-weight: 700; line-height: 1; }
+    .truth-table th:nth-child(1), .truth-table td:nth-child(1), .truth-table th:nth-child(2), .truth-table td:nth-child(2) { width: 9%; }
+    .truth-table th:nth-child(3), .truth-table td:nth-child(3) { width: 15%; }
+    .truth-table th:nth-child(4), .truth-table td:nth-child(4) { width: 11%; }
+    .truth-table th:nth-child(5), .truth-table td:nth-child(5) { width: 8%; }
+    .truth-table th:nth-child(6), .truth-table td:nth-child(6) { width: 18%; }
+    .truth-table th:nth-child(7), .truth-table td:nth-child(7) { width: 15%; }
+    .truth-table .success .result-mark, .truth-table .success .result-text { color: var(--green); }
+    .truth-table .failure .result-mark, .truth-table .failure .result-text { color: var(--red); }
+
+    .results-equation { margin: 14px 0 0; color: var(--faint); font-family: var(--mono); font-size: 12px; }
+    .results-equation strong { color: var(--muted); font-weight: 500; }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 18px;
+      padding-top: 0;
+    }
+
+    .metric {
+      border-top: 1px solid var(--line-bright);
+      padding-top: 12px;
+    }
+
+    .metric-label { margin-bottom: 6px; color: var(--faint); font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; }
+    .metric-value { color: var(--text); font-family: var(--mono); font-size: 24px; line-height: 1; }
+    .metric-value.good { color: var(--green); }
+    .metric-note { margin-top: 7px; color: var(--muted); font-size: 11px; line-height: 1.4; }
+
+    .statusbar {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      align-items: center;
+      gap: 18px;
+      margin-top: 16px;
+      border-top: 1px solid var(--line);
+      padding-top: 13px;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 11px;
+    }
+
+    .statusbar strong { color: var(--text); font-weight: 500; }
+    .status-message { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .status-chip { display: inline-flex; align-items: center; gap: 6px; }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--amber); }
+    .status-dot.good { background: var(--green); }
+
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
+    @media (max-width: 1120px) {
+      .workspace { grid-template-columns: minmax(0, 1fr); }
+      .results-panel { min-height: auto; }
+      .metrics { margin-top: 20px; }
+    }
+
+    @media (max-width: 720px) {
+      .app-shell { width: min(100% - 24px, 1480px); padding-top: 14px; }
+      .panel-header { align-items: flex-start; flex-direction: column; }
+      .formula-strip { width: 100%; justify-content: center; overflow-x: auto; }
+      .network-panel, .results-panel { padding: 14px; }
+      .stage-frame, .stage-frame svg { min-height: 0; }
+      .stage-canvas { min-height: 0; }
+      .stage-canvas svg { min-height: 0; }
+      .connection-control { gap: 2px; transform: translate(-50%, -50%) scale(0.78); }
+      .node-input-control select { width: 34px; height: 20px; font-size: 10px; }
+      .parameter-groups { grid-template-columns: 1fr; }
+      .parameter-group { display: grid; grid-template-columns: 150px minmax(0, 1fr); align-items: center; gap: 12px; }
+      .parameter-group-header { margin-bottom: 0; }
+      .parameter-control + .parameter-control { margin-top: 8px; }
+      .statusbar { grid-template-columns: 1fr; gap: 8px; }
+      .status-message { white-space: normal; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <h1 class="sr-only">Learning XOR</h1>
+      <div class="top-controls">
+        <label class="field-inline" for="activation-select">
+          <span>hidden activation</span>
+          <select id="activation-select" aria-label="Hidden activation">
+            <option value="sigmoid" selected>sigmoid</option>
+            <option value="relu">ReLU</option>
+          </select>
+        </label>
+        <label class="field-inline" for="learning-rate-select">
+          <span>learning rate</span>
+          <select id="learning-rate-select" aria-label="Learning rate">
+            <option value="0.1">0.10</option>
+            <option value="0.25">0.25</option>
+            <option value="0.5">0.50</option>
+            <option value="1" selected>1.00</option>
+            <option value="2">2.00</option>
+          </select>
+        </label>
+        <label class="field-inline" for="auto-step-select">
+          <span>auto step</span>
+          <select id="auto-step-select" aria-label="Automatic gradient descent rate">
+            <option value="1">1/s</option>
+            <option value="2" selected>2/s</option>
+            <option value="5">5/s</option>
+            <option value="10">10/s</option>
+            <option value="20">20/s</option>
+          </select>
+        </label>
+        <label class="check-inline" for="gradient-hints">
+          <input id="gradient-hints" data-testid="gradient-hints" type="checkbox">
+          <span>Gradient hints</span>
+        </label>
+        <button id="gradient-step-button" class="button-step" type="button" aria-pressed="false">Start gradient descent</button>
+        <button id="reset-button" class="button-secondary" type="button">&#8634; Reset</button>
+        <button id="theme-toggle" class="button-secondary theme-toggle" type="button" aria-pressed="false" aria-label="Switch to light theme">Light theme</button>
+      </div>
+    </header>
+
+    <main class="workspace" aria-label="XOR neural network lab">
+      <section class="panel network-panel" aria-label="XOR network">
+        <div class="formula-strip" aria-label="Layer notation">
+          <strong>x1, x2</strong><span class="formula-arrow">&#8594;</span><strong>z1, z2</strong><span class="formula-arrow">&#8594;</span><strong>h1, h2</strong><span class="formula-arrow">&#8594;</span><strong>z3</strong><span class="formula-arrow">&#8594;</span><strong>y</strong>
+        </div>
+
+        <div class="stage-frame">
+          <div class="stage-canvas">
+            <!-- Gradient arrows are created at runtime with data-testid="gradient-arrow". -->
+            <svg viewBox="0 0 850 620" role="img" aria-labelledby="network-svg-title network-svg-description">
+            <title id="network-svg-title">Two hidden-neuron XOR network</title>
+            <desc id="network-svg-description">Inputs x1 and x2 feed two hidden preactivations z1 and z2, then hidden activations h1 and h2 feed output preactivation z3 and sigmoid prediction y.</desc>
+            <defs>
+              <pattern id="stage-grid" width="32" height="32" patternUnits="userSpaceOnUse">
+                <path d="M 32 0 L 0 0 0 32" class="svg-grid-line" fill="none"></path>
+              </pattern>
+            </defs>
+            <rect width="850" height="620" fill="url(#stage-grid)"></rect>
+            <g id="edge-layer" aria-hidden="true">
+              <line id="edge-w11" class="svg-edge" x1="112" y1="180" x2="347" y2="180"></line>
+              <line id="edge-w12" class="svg-edge" x1="112" y1="440" x2="347" y2="180"></line>
+              <line id="edge-w21" class="svg-edge" x1="112" y1="180" x2="347" y2="440"></line>
+              <line id="edge-w22" class="svg-edge" x1="112" y1="440" x2="347" y2="440"></line>
+              <line id="edge-v1" class="svg-edge" x1="433" y1="180" x2="648" y2="310"></line>
+              <line id="edge-v2" class="svg-edge" x1="433" y1="440" x2="648" y2="310"></line>
+              <line class="svg-bias-line" x1="390" y1="90" x2="390" y2="132"></line>
+              <line class="svg-bias-line" x1="390" y1="488" x2="390" y2="530"></line>
+              <line class="svg-bias-line" x1="690" y1="365" x2="690" y2="415"></line>
+            </g>
+            <g id="edge-label-layer" aria-hidden="true">
+              <text id="label-w11" class="svg-edge-label" x="230" y="165"></text>
+              <text id="label-w12" class="svg-edge-label" x="228" y="285"></text>
+              <text id="label-w21" class="svg-edge-label" x="228" y="335"></text>
+              <text id="label-w22" class="svg-edge-label" x="230" y="425"></text>
+              <text id="label-v1" class="svg-edge-label" x="540" y="215"></text>
+              <text id="label-v2" class="svg-edge-label" x="540" y="410"></text>
+              <text id="label-b1" class="svg-bias-label" x="400" y="109"></text>
+              <text id="label-b2" class="svg-bias-label" x="400" y="548"></text>
+              <text id="label-b3" class="svg-bias-label" x="700" y="405"></text>
+            </g>
+            <g id="node-layer">
+              <g id="node-input-x1">
+                <circle id="body-input-x1" class="svg-node-body" cx="70" cy="180" r="42"></circle>
+                <circle class="svg-input-dot" cx="70" cy="180" r="4"></circle>
+                <text class="svg-node-tag" x="70" y="171">x1</text>
+                <text class="svg-node-kicker" x="70" y="243">input</text>
+              </g>
+              <g id="node-input-x2">
+                <circle id="body-input-x2" class="svg-node-body" cx="70" cy="440" r="42"></circle>
+                <circle class="svg-input-dot" cx="70" cy="440" r="4"></circle>
+                <text class="svg-node-tag" x="70" y="431">x2</text>
+                <text class="svg-node-kicker" x="70" y="503">input</text>
+              </g>
+              <g id="node-hidden-1">
+                <circle id="body-hidden-1" class="svg-node-body" cx="390" cy="180" r="44"></circle>
+                <text class="svg-node-tag" x="390" y="163">z1</text>
+                <text id="value-z1" class="svg-node-value" x="390" y="181"></text>
+                <text class="svg-node-sub" x="390" y="199">h1</text>
+                <text id="value-h1" class="svg-node-value" x="390" y="216"></text>
+                <text class="svg-node-kicker" x="390" y="248">hidden 1</text>
+              </g>
+              <g id="node-hidden-2">
+                <circle id="body-hidden-2" class="svg-node-body" cx="390" cy="440" r="44"></circle>
+                <text class="svg-node-tag" x="390" y="423">z2</text>
+                <text id="value-z2" class="svg-node-value" x="390" y="441"></text>
+                <text class="svg-node-sub" x="390" y="459">h2</text>
+                <text id="value-h2" class="svg-node-value" x="390" y="476"></text>
+                <text class="svg-node-kicker" x="390" y="508">hidden 2</text>
+              </g>
+              <g id="node-output">
+                <circle id="body-output" class="svg-node-body" cx="690" cy="310" r="48"></circle>
+                <text class="svg-node-tag" x="690" y="288">z3</text>
+                <text id="value-z3" class="svg-node-value" x="690" y="307"></text>
+                <text class="svg-node-sub" x="690" y="324">y / sigmoid</text>
+                <text id="value-y" class="svg-node-value" x="690" y="342"></text>
+                <text class="svg-node-kicker" x="690" y="375">output</text>
+              </g>
+            </g>
+              <g id="gradient-layer" aria-live="polite"></g>
+            </svg>
+            <div class="input-selectors" aria-label="Input values">
+              <label class="node-input-control" style="--x:8.2%; --y:32%;">
+                <span class="sr-only">Set x1</span>
+                <select id="input-x1-control" data-testid="input-x1-control" aria-label="Set x1">
+                  <option value="0">0</option>
+                  <option value="1">1</option>
+                </select>
+              </label>
+              <label class="node-input-control" style="--x:8.2%; --y:74%;">
+                <span class="sr-only">Set x2</span>
+                <select id="input-x2-control" data-testid="input-x2-control" aria-label="Set x2">
+                  <option value="0">0</option>
+                  <option value="1">1</option>
+                </select>
+              </label>
+            </div>
+            <div id="connection-controls" class="connection-controls" aria-label="Weight and bias knobs"></div>
+          </div>
+          <div class="stage-caption">
+            <span>Active example <strong id="active-example">(0, 0) &#8594; 0</strong></span>
+            <span class="knob-help">Drag vertically · move slowly or hold <kbd>Shift</kbd> for fine control</span>
+            <span>Threshold <strong>0.500</strong></span>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel results-panel" aria-label="XOR truth table">
+
+        <div class="table-scroll">
+          <table class="truth-table">
+            <caption class="sr-only">XOR rows and every layer output</caption>
+            <thead>
+              <tr>
+                <th scope="col">x1</th>
+                <th scope="col">x2</th>
+                <th scope="col">y</th>
+                <th scope="col">pred</th>
+                <th scope="col">t</th>
+                <th scope="col">result</th>
+                <th scope="col">BCE</th>
+              </tr>
+            </thead>
+            <tbody id="truth-body"></tbody>
+          </table>
+        </div>
+
+        <p class="results-equation"><strong>BCE</strong> = -(t log y + (1 - t) log(1 - y))</p>
+
+        <div class="metrics">
+          <div class="metric">
+            <div class="metric-label">Mean BCE</div>
+            <div id="mean-loss" class="metric-value">0.000</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Accuracy</div>
+            <div id="accuracy" data-testid="accuracy" class="metric-value">0%</div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="statusbar" aria-live="polite">
+      <span id="status-message" class="status-message">Ready for manual tuning.</span>
+    </footer>
+  </div>
+
+  <script>
+    (() => {
+      const PARAM_MIN = -10;
+      const PARAM_MAX = 10;
+      const PARAM_STEP = 0.01;
+      const PARAM_PRECISION = 2;
+      const FINE_PARAM_STEP = 0.001;
+      const FINE_PARAM_PRECISION = 3;
+      const GRADIENT_PRECISION = 4;
+      const KNOB_PIXELS_PER_STEP = 10;
+      const KNOB_FINE_VELOCITY = 0.12;
+      const KNOB_FAST_VELOCITY = 0.8;
+      const KNOB_FAST_MULTIPLIER = 3;
+      const XOR_ROWS = [
+        { x1: 0, x2: 0, target: 0 },
+        { x1: 0, x2: 1, target: 1 },
+        { x1: 1, x2: 0, target: 1 },
+        { x1: 1, x2: 1, target: 0 }
+      ];
+      const CONNECTION_CONTROLS = [
+        ['w11', 'weight from x1 to z1', 27, 23], ['w12', 'weight from x2 to z1', 27, 45], ['w21', 'weight from x1 to z2', 27, 55],
+        ['w22', 'weight from x2 to z2', 27, 77], ['v1', 'weight from h1 to z3', 64, 32], ['v2', 'weight from h2 to z3', 64, 68],
+        ['b1', 'bias for z1', 49.3, 14], ['b2', 'bias for z2', 49.3, 88], ['b3', 'bias for z3', 84, 65]
+      ];
+      const state = {
+        activation: 'sigmoid',
+        learningRate: 1,
+        stepsPerSecond: 2,
+        isTraining: false,
+        gradientHints: false,
+        selectedRow: 0,
+        params: { w11: 0.4, w12: -0.2, b1: 0.1, w21: -0.2, w22: 0.3, b2: -0.1, v1: 0.3, v2: -0.3, b3: 0 }
+      };
+      let knobDrag = null;
+      let trainingTimer = null;
+      const THEME_STORAGE_KEY = 'xor-lab-theme';
+
+      const $ = (selector, root = document) => root.querySelector(selector);
+      const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+      const format = (value, digits = 3) => {
+        const rounded = Number(value.toFixed(digits));
+        return Object.is(rounded, -0) ? (0).toFixed(digits) : rounded.toFixed(digits);
+      };
+      const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+      function storedTheme() {
+        try {
+          const theme = localStorage.getItem(THEME_STORAGE_KEY);
+          return theme === 'light' || theme === 'dark' ? theme : 'dark';
+        } catch {
+          return 'dark';
+        }
+      }
+
+      function applyTheme(theme, persist = false) {
+        const isLight = theme === 'light';
+        document.documentElement.dataset.theme = isLight ? 'light' : 'dark';
+        const button = $('#theme-toggle');
+        button.textContent = isLight ? 'Dark theme' : 'Light theme';
+        button.setAttribute('aria-pressed', isLight ? 'true' : 'false');
+        button.setAttribute('aria-label', `Switch to ${isLight ? 'dark' : 'light'} theme`);
+        if (persist) {
+          try {
+            localStorage.setItem(THEME_STORAGE_KEY, isLight ? 'light' : 'dark');
+          } catch {
+            // The theme still works when storage is unavailable.
+          }
+        }
+      }
+
+      function toggleTheme() {
+        applyTheme(document.documentElement.dataset.theme === 'light' ? 'dark' : 'light', true);
+      }
+
+      function sigmoid(z) {
+        return 1 / (1 + Math.exp(-z));
+      }
+
+      function activationValue(name, z) {
+        if (name === 'sigmoid') return sigmoid(z);
+        return Math.max(0, z);
+      }
+
+      function activationDerivative(name, z) {
+        if (name === 'sigmoid') {
+          const value = sigmoid(z);
+          return value * (1 - value);
+        }
+        return z > 0 ? 1 : 0;
+      }
+
+      function binaryCrossEntropy(prediction, target) {
+        const safe = clamp(prediction, 1e-12, 1 - 1e-12);
+        return -(target * Math.log(safe) + (1 - target) * Math.log(1 - safe));
+      }
+
+      function forwardRow(row, params = state.params, activation = state.activation) {
+        const z1 = params.w11 * row.x1 + params.w12 * row.x2 + params.b1;
+        const z2 = params.w21 * row.x1 + params.w22 * row.x2 + params.b2;
+        const h1 = activationValue(activation, z1);
+        const h2 = activationValue(activation, z2);
+        const z3 = params.v1 * h1 + params.v2 * h2 + params.b3;
+        const y = sigmoid(z3);
+        const prediction = y >= 0.5 ? 1 : 0;
+        return { x1: row.x1, x2: row.x2, target: row.target, z1, h1, z2, h2, z3, y, prediction, correct: prediction === row.target, loss: binaryCrossEntropy(y, row.target) };
+      }
+
+      function evaluate(params = state.params, activation = state.activation) {
+        const rows = XOR_ROWS.map(row => forwardRow(row, params, activation));
+        const loss = rows.reduce((sum, row) => sum + row.loss, 0) / rows.length;
+        const correct = rows.filter(row => row.correct).length;
+        return { rows, loss, accuracy: correct / rows.length };
+      }
+
+      function calculateGradients(params = state.params, activation = state.activation) {
+        const gradients = { w11: 0, w12: 0, b1: 0, w21: 0, w22: 0, b2: 0, v1: 0, v2: 0, b3: 0 };
+        XOR_ROWS.forEach(row => {
+          const result = forwardRow(row, params, activation);
+          const dz3 = (result.y - result.target) / XOR_ROWS.length;
+          const dz1 = dz3 * params.v1 * activationDerivative(activation, result.z1);
+          const dz2 = dz3 * params.v2 * activationDerivative(activation, result.z2);
+          gradients.w11 += dz1 * row.x1;
+          gradients.w12 += dz1 * row.x2;
+          gradients.b1 += dz1;
+          gradients.w21 += dz2 * row.x1;
+          gradients.w22 += dz2 * row.x2;
+          gradients.b2 += dz2;
+          gradients.v1 += dz3 * result.h1;
+          gradients.v2 += dz3 * result.h2;
+          gradients.b3 += dz3;
+        });
+        return gradients;
+      }
+
+      function buildConnectionControls() {
+        $('#connection-controls').innerHTML = CONNECTION_CONTROLS.map(([name, label, x, y]) => `
+          <label class="connection-control" data-control="${name}" style="--x:${x}%; --y:${y}%" aria-label="${label}">
+            <span class="connection-name">${name}</span>
+            <span class="knob-box" title="Drag vertically. Move slowly or hold Shift for fine adjustment.">
+              <span class="knob-feedback" aria-hidden="true"><span data-drag-value-for="${name}">${format(state.params[name], PARAM_PRECISION)}</span></span>
+              <span class="knob-disc" aria-hidden="true"><span class="knob-indicator-anchor" data-indicator-for="${name}"><span class="knob-indicator"></span></span></span>
+              <input class="knob-range" data-param="${name}" type="range" min="${PARAM_MIN}" max="${PARAM_MAX}" step="${PARAM_STEP}" aria-label="${label}. Use arrow keys to adjust; hold Shift for fine adjustment.">
+            </span>
+            <span class="gradient-slot" data-gradient-for="${name}" aria-live="polite"></span>
+            <span class="connection-value" data-value-for="${name}"></span>
+          </label>
+        `).join('');
+      }
+
+      function setParameter(name, rawValue, step = PARAM_STEP) {
+        const parsed = Number.parseFloat(rawValue);
+        if (!Number.isFinite(parsed)) return;
+        const precision = step === FINE_PARAM_STEP ? FINE_PARAM_PRECISION : PARAM_PRECISION;
+        const quantized = Math.round(parsed / step) * step;
+        state.params[name] = clamp(Number(quantized.toFixed(precision)), PARAM_MIN, PARAM_MAX);
+        render();
+      }
+
+      function formatParameter(value) {
+        const needsFinePrecision = Math.abs(value * 100 - Math.round(value * 100)) > 1e-7;
+        return format(value, needsFinePrecision ? FINE_PARAM_PRECISION : PARAM_PRECISION);
+      }
+
+      function renderControls() {
+        $$('[data-param]').forEach(control => {
+          const name = control.dataset.param;
+          const value = state.params[name];
+          control.value = clamp(value, PARAM_MIN, PARAM_MAX);
+          const valueLabel = $(`[data-value-for="${name}"]`);
+          if (valueLabel) valueLabel.textContent = formatParameter(value);
+          const indicator = $(`[data-indicator-for="${name}"]`);
+          if (indicator) {
+            const ratio = (value - PARAM_MIN) / (PARAM_MAX - PARAM_MIN);
+            indicator.style.transform = `rotate(${-135 + ratio * 270}deg)`;
+            indicator.closest('.knob-box').style.setProperty('--knob-sweep', `${ratio * 270}deg`);
+          }
+          control.setAttribute('aria-valuenow', value);
+          control.setAttribute('aria-valuetext', formatParameter(value));
+        });
+      }
+
+      function renderGradientHints(gradients) {
+        $$('[data-gradient-for]').forEach(slot => {
+          slot.innerHTML = '';
+          if (!state.gradientHints) return;
+          const name = slot.dataset.gradientFor;
+          const gradient = gradients[name];
+          const magnitudes = Object.values(gradients).map(value => Math.abs(value));
+          const maxMagnitude = Math.max(...magnitudes, 0);
+          const ratio = maxMagnitude === 0 ? 0 : Math.abs(gradient) / maxMagnitude;
+          if (ratio === 0) {
+            const flat = document.createElement('span');
+            flat.className = 'gradient-flat';
+            flat.textContent = '0';
+            flat.setAttribute('aria-label', `${name}: no gradient`);
+            slot.appendChild(flat);
+            return;
+          }
+          const direction = -gradient >= 0 ? 'up' : 'down';
+          const arrow = document.createElement('span');
+          arrow.className = 'gradient-arrow';
+          arrow.dataset.testid = 'gradient-arrow';
+          arrow.style.setProperty('--arrow-size', `${12 + ratio * 14}px`);
+          arrow.style.setProperty('--arrow-offset', `${direction === 'up' ? -ratio * 2 : ratio * 2}px`);
+          arrow.textContent = direction === 'up' ? '\u2191' : '\u2193';
+          arrow.title = `${name}: ${direction === 'up' ? 'increase' : 'decrease'} to reduce loss`;
+          arrow.setAttribute('aria-label', arrow.title);
+          slot.appendChild(arrow);
+        });
+      }
+
+      function updateEdge(name, value) {
+        const edge = $(`#edge-${name}`);
+        if (!edge) return;
+        const positive = value >= 0;
+        const color = positive ? 'var(--blue)' : 'var(--red)';
+        edge.style.stroke = color;
+        edge.style.strokeWidth = (1.5 + Math.abs(value) * 0.55).toFixed(2);
+        edge.style.opacity = (0.32 + Math.min(0.6, Math.abs(value) / PARAM_MAX * 0.6)).toFixed(2);
+      }
+
+      function renderNetwork(result) {
+        $('#input-x1-control').value = result.x1;
+        $('#input-x2-control').value = result.x2;
+        $('#value-z1').textContent = format(result.z1);
+        $('#value-h1').textContent = format(result.h1);
+        $('#value-z2').textContent = format(result.z2);
+        $('#value-h2').textContent = format(result.h2);
+        $('#value-z3').textContent = format(result.z3);
+        $('#value-y').textContent = format(result.y);
+        ['w11', 'w12', 'w21', 'w22', 'v1', 'v2'].forEach(name => updateEdge(name, state.params[name]));
+        $('#body-hidden-1').classList.toggle('active', result.h1 > 0);
+        $('#body-hidden-2').classList.toggle('active', result.h2 > 0);
+        $('#body-output').classList.toggle('success', result.correct);
+        $('#body-output').classList.toggle('failure', !result.correct);
+        $('#body-input-x1').classList.toggle('active', result.x1 === 1);
+        $('#body-input-x2').classList.toggle('active', result.x2 === 1);
+      }
+
+      function renderTable(evaluation) {
+        const body = $('#truth-body');
+        body.innerHTML = evaluation.rows.map((row, index) => {
+          const resultClass = row.correct ? 'success' : 'failure';
+          const mark = row.correct ? '\u2713' : '\u2715';
+          const resultWord = row.correct ? 'correct' : 'miss';
+          return `
+            <tr data-testid="xor-row" data-row="${index}" class="${index === state.selectedRow ? 'active' : ''}" tabindex="0" aria-label="XOR row ${index + 1}, ${resultWord}">
+              <td>${row.x1}</td><td>${row.x2}</td>
+              <td>${format(row.y)}</td><td class="prediction">${row.prediction}</td><td>${row.target}</td>
+              <td data-testid="row-result" class="${resultClass}" aria-label="${resultWord}"><span class="result-cell"><span class="result-mark" aria-hidden="true">${mark}</span><span class="result-text sr-only">${resultWord}</span></span></td>
+              <td>${format(row.loss)}</td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      function renderStatus(evaluation, gradients) {
+        const percentage = Math.round(evaluation.accuracy * 100);
+        const activationLabel = state.activation === 'relu' ? 'ReLU' : state.activation;
+        const flat = Object.values(gradients).filter(value => Math.abs(value) < 1e-8).length;
+        const status = state.isTraining
+          ? `${activationLabel}: gradient descent running at ${state.stepsPerSecond}/s.`
+          : state.gradientHints
+          ? `${activationLabel}: arrows point toward lower BCE${flat ? ` / ${flat} flat` : ''}.`
+          : `${activationLabel}: manual parameter tuning active.`;
+        $('#mean-loss').textContent = format(evaluation.loss);
+        $('#accuracy').textContent = `${percentage}%`;
+        $('#accuracy').classList.toggle('good', percentage === 100);
+        $('#status-message').textContent = status;
+        const active = XOR_ROWS[state.selectedRow];
+        $('#active-example').textContent = `(${active.x1}, ${active.x2}) \u2192 ${active.target}`;
+      }
+
+      function renderTrainingControls() {
+        $('#auto-step-select').value = state.stepsPerSecond;
+        const button = $('#gradient-step-button');
+        button.textContent = state.isTraining ? 'Pause gradient descent' : 'Start gradient descent';
+        button.setAttribute('aria-pressed', state.isTraining ? 'true' : 'false');
+      }
+
+      function render() {
+        const evaluation = evaluate(state.params, state.activation);
+        const gradients = calculateGradients(state.params, state.activation);
+        const activeResult = evaluation.rows[state.selectedRow];
+        renderControls();
+        renderGradientHints(gradients);
+        renderNetwork(activeResult);
+        renderTable(evaluation);
+        renderStatus(evaluation, gradients);
+        renderTrainingControls();
+      }
+
+      function resetState() {
+        stopGradientDescent();
+        state.params = Object.fromEntries(Object.keys(state.params).map(name => [
+          name,
+          Number((-1 + Math.random() * 2).toFixed(PARAM_PRECISION))
+        ]));
+        render();
+      }
+
+      function stepGradientDescent() {
+        const gradients = calculateGradients();
+        Object.keys(state.params).forEach(name => {
+          const next = clamp(state.params[name] - state.learningRate * gradients[name], PARAM_MIN, PARAM_MAX);
+          state.params[name] = Number(next.toFixed(GRADIENT_PRECISION));
+        });
+        render();
+      }
+
+      function stopGradientDescent() {
+        if (trainingTimer !== null) clearInterval(trainingTimer);
+        trainingTimer = null;
+        state.isTraining = false;
+        renderTrainingControls();
+      }
+
+      function startGradientDescent() {
+        state.isTraining = true;
+        stepGradientDescent();
+        trainingTimer = setInterval(stepGradientDescent, 1000 / state.stepsPerSecond);
+        renderTrainingControls();
+      }
+
+      function toggleGradientDescent() {
+        if (state.isTraining) stopGradientDescent();
+        else startGradientDescent();
+      }
+
+      function setAutoStepRate(rawValue) {
+        const rate = Number(rawValue);
+        if (![1, 2, 5, 10, 20].includes(rate)) return;
+        state.stepsPerSecond = rate;
+        if (state.isTraining) {
+          clearInterval(trainingTimer);
+          trainingTimer = setInterval(stepGradientDescent, 1000 / state.stepsPerSecond);
+        }
+        renderTrainingControls();
+      }
+
+      function handleParameterEvent(event) {
+        const target = event.target.closest('[data-param]');
+        if (!target) return;
+        setParameter(target.dataset.param, target.value);
+      }
+
+      function setKnobFeedback(drag, mode) {
+        drag.mode = mode;
+        drag.control.dataset.dragMode = mode;
+        const value = state.params[drag.name];
+        const valueNode = $(`[data-drag-value-for="${drag.name}"]`);
+        if (valueNode) valueNode.textContent = format(value, mode === 'fine' ? FINE_PARAM_PRECISION : PARAM_PRECISION);
+      }
+
+      function startKnobDrag(event) {
+        const knob = event.target.closest('.knob-box');
+        if (!knob || event.button !== 0) return;
+        const control = knob.closest('[data-control]');
+        const name = control.dataset.control;
+        knobDrag = {
+          pointerId: event.pointerId,
+          knob,
+          control,
+          name,
+          lastY: event.clientY,
+          lastTime: event.timeStamp,
+          rawValue: state.params[name],
+          hasMoved: false,
+          mode: 'adjust'
+        };
+        control.classList.add('dragging');
+        setKnobFeedback(knobDrag, event.shiftKey ? 'fine' : 'adjust');
+        knob.setPointerCapture(event.pointerId);
+        event.preventDefault();
+      }
+
+      function moveKnobDrag(event) {
+        if (!knobDrag || event.pointerId !== knobDrag.pointerId) return;
+        const deltaY = knobDrag.lastY - event.clientY;
+        if (deltaY === 0) return;
+        const elapsed = Math.max(1, event.timeStamp - knobDrag.lastTime);
+        const velocity = Math.abs(deltaY) / elapsed;
+        const isFine = event.shiftKey || (knobDrag.hasMoved && velocity <= KNOB_FINE_VELOCITY);
+        const isFast = !isFine && knobDrag.hasMoved && velocity >= KNOB_FAST_VELOCITY;
+        const mode = isFine ? 'fine' : isFast ? 'fast' : 'adjust';
+        const multiplier = isFast ? KNOB_FAST_MULTIPLIER : 1;
+        const sensitivity = (PARAM_STEP / KNOB_PIXELS_PER_STEP) * multiplier;
+        knobDrag.rawValue = clamp(knobDrag.rawValue + deltaY * sensitivity, PARAM_MIN, PARAM_MAX);
+        knobDrag.lastY = event.clientY;
+        knobDrag.lastTime = event.timeStamp;
+        knobDrag.hasMoved = true;
+        setParameter(knobDrag.name, knobDrag.rawValue, isFine ? FINE_PARAM_STEP : PARAM_STEP);
+        setKnobFeedback(knobDrag, mode);
+      }
+
+      function endKnobDrag(event) {
+        if (!knobDrag || event.pointerId !== knobDrag.pointerId) return;
+        knobDrag.control.classList.remove('dragging');
+        delete knobDrag.control.dataset.dragMode;
+        knobDrag = null;
+      }
+
+      function handleKnobKeydown(event) {
+        const control = event.target.closest('.knob-range');
+        if (!control) return;
+        const name = control.dataset.param;
+        const step = event.shiftKey ? FINE_PARAM_STEP : PARAM_STEP;
+        let nextValue = null;
+        if (event.key === 'ArrowUp' || event.key === 'ArrowRight') nextValue = state.params[name] + step;
+        if (event.key === 'ArrowDown' || event.key === 'ArrowLeft') nextValue = state.params[name] - step;
+        if (event.key === 'PageUp') nextValue = state.params[name] + 0.1;
+        if (event.key === 'PageDown') nextValue = state.params[name] - 0.1;
+        if (event.key === 'Home') nextValue = PARAM_MIN;
+        if (event.key === 'End') nextValue = PARAM_MAX;
+        if (nextValue === null) return;
+        event.preventDefault();
+        setParameter(name, nextValue, event.shiftKey ? FINE_PARAM_STEP : PARAM_STEP);
+      }
+
+      function selectInput(name, rawValue) {
+        const value = Number(rawValue);
+        if (value !== 0 && value !== 1) return;
+        const active = XOR_ROWS[state.selectedRow];
+        const x1 = name === 'x1' ? value : active.x1;
+        const x2 = name === 'x2' ? value : active.x2;
+        state.selectedRow = XOR_ROWS.findIndex(row => row.x1 === x1 && row.x2 === x2);
+        render();
+      }
+
+      buildConnectionControls();
+      $('#connection-controls').addEventListener('input', handleParameterEvent);
+      $('#connection-controls').addEventListener('pointerdown', startKnobDrag);
+      $('#connection-controls').addEventListener('pointermove', moveKnobDrag);
+      $('#connection-controls').addEventListener('pointerup', endKnobDrag);
+      $('#connection-controls').addEventListener('pointercancel', endKnobDrag);
+      $('#connection-controls').addEventListener('lostpointercapture', endKnobDrag);
+      $('#connection-controls').addEventListener('keydown', handleKnobKeydown);
+      $('#activation-select').addEventListener('change', event => {
+        state.activation = event.target.value;
+        render();
+      });
+      $('#learning-rate-select').addEventListener('change', event => {
+        state.learningRate = Number(event.target.value);
+      });
+      $('#auto-step-select').addEventListener('change', event => setAutoStepRate(event.target.value));
+      $('#gradient-hints').addEventListener('change', event => {
+        state.gradientHints = event.target.checked;
+        render();
+      });
+      $('#input-x1-control').addEventListener('change', event => selectInput('x1', event.target.value));
+      $('#input-x2-control').addEventListener('change', event => selectInput('x2', event.target.value));
+      $('#gradient-step-button').addEventListener('click', toggleGradientDescent);
+      $('#reset-button').addEventListener('click', resetState);
+      $('#theme-toggle').addEventListener('click', toggleTheme);
+      $('#truth-body').addEventListener('click', event => {
+        const row = event.target.closest('[data-row]');
+        if (!row) return;
+        state.selectedRow = Number(row.dataset.row);
+        render();
+      });
+      $('#truth-body').addEventListener('keydown', event => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        const row = event.target.closest('[data-row]');
+        if (!row) return;
+        event.preventDefault();
+        state.selectedRow = Number(row.dataset.row);
+        render();
+      });
+
+      applyTheme(storedTheme());
+      window.XORLab = { state, XOR_ROWS, sigmoid, activationValue, activationDerivative, binaryCrossEntropy, forwardRow, evaluate, calculateGradients, stepGradientDescent, startGradientDescent, stopGradientDescent, toggleGradientDescent, applyTheme, toggleTheme, render };
+      render();
+    })();
+  </script>
+</body>
+</html>
