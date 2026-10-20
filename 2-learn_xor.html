@@ -591,6 +591,7 @@
             <option value="0.5">0.50</option>
             <option value="1" selected>1.00</option>
             <option value="2">2.00</option>
+            <option value="5">5.00</option>
           </select>
         </label>
         <label class="field-inline" for="auto-step-select">
@@ -601,6 +602,7 @@
             <option value="5">5/s</option>
             <option value="10">10/s</option>
             <option value="20">20/s</option>
+            <option value="50">50/s</option>
           </select>
         </label>
         <label class="check-inline" for="gradient-hints">
@@ -713,7 +715,7 @@
           </div>
           <div class="stage-caption">
             <span>Active example <strong id="active-example">(0, 0) &#8594; 0</strong></span>
-            <span class="knob-help">Drag vertically · move slowly or hold <kbd>Shift</kbd> for fine control</span>
+            <span class="knob-help">Drag vertically · hold <kbd>Shift</kbd> for fine control</span>
             <span>Threshold <strong>0.500</strong></span>
           </div>
         </div>
@@ -769,9 +771,7 @@
       const FINE_PARAM_PRECISION = 3;
       const GRADIENT_PRECISION = 4;
       const KNOB_PIXELS_PER_STEP = 10;
-      const KNOB_FINE_VELOCITY = 0.12;
-      const KNOB_FAST_VELOCITY = 0.8;
-      const KNOB_FAST_MULTIPLIER = 3;
+      const KNOB_NORMAL_MULTIPLIER = 20;
       const XOR_ROWS = [
         { x1: 0, x2: 0, target: 0 },
         { x1: 0, x2: 1, target: 1 },
@@ -881,7 +881,7 @@
         $('#connection-controls').innerHTML = CONNECTION_CONTROLS.map(([name, label, x, y]) => `
           <label class="connection-control" data-control="${name}" style="--x:${x}%; --y:${y}%" aria-label="${label}">
             <span class="connection-name">${name}</span>
-            <span class="knob-box" title="Drag vertically. Move slowly or hold Shift for fine adjustment.">
+            <span class="knob-box" title="Drag vertically. Hold Shift for fine adjustment.">
               <span class="knob-feedback" aria-hidden="true"><span data-drag-value-for="${name}">${format(state.params[name], PARAM_PRECISION)}</span></span>
               <span class="knob-disc" aria-hidden="true"><span class="knob-indicator-anchor" data-indicator-for="${name}"><span class="knob-indicator"></span></span></span>
               <input class="knob-range" data-param="${name}" type="range" min="${PARAM_MIN}" max="${PARAM_MAX}" step="${PARAM_STEP}" aria-label="${label}. Use arrow keys to adjust; hold Shift for fine adjustment.">
@@ -1074,7 +1074,7 @@
 
       function setAutoStepRate(rawValue) {
         const rate = Number(rawValue);
-        if (![1, 2, 5, 10, 20].includes(rate)) return;
+        if (![1, 2, 5, 10, 20, 50].includes(rate)) return;
         state.stepsPerSecond = rate;
         if (state.isTraining) {
           clearInterval(trainingTimer);
@@ -1108,9 +1108,7 @@
           control,
           name,
           lastY: event.clientY,
-          lastTime: event.timeStamp,
           rawValue: state.params[name],
-          hasMoved: false,
           mode: 'adjust'
         };
         control.classList.add('dragging');
@@ -1123,17 +1121,12 @@
         if (!knobDrag || event.pointerId !== knobDrag.pointerId) return;
         const deltaY = knobDrag.lastY - event.clientY;
         if (deltaY === 0) return;
-        const elapsed = Math.max(1, event.timeStamp - knobDrag.lastTime);
-        const velocity = Math.abs(deltaY) / elapsed;
-        const isFine = event.shiftKey || (knobDrag.hasMoved && velocity <= KNOB_FINE_VELOCITY);
-        const isFast = !isFine && knobDrag.hasMoved && velocity >= KNOB_FAST_VELOCITY;
-        const mode = isFine ? 'fine' : isFast ? 'fast' : 'adjust';
-        const multiplier = isFast ? KNOB_FAST_MULTIPLIER : 1;
+        const isFine = event.shiftKey;
+        const mode = isFine ? 'fine' : 'adjust';
+        const multiplier = isFine ? 1 : KNOB_NORMAL_MULTIPLIER;
         const sensitivity = (PARAM_STEP / KNOB_PIXELS_PER_STEP) * multiplier;
         knobDrag.rawValue = clamp(knobDrag.rawValue + deltaY * sensitivity, PARAM_MIN, PARAM_MAX);
         knobDrag.lastY = event.clientY;
-        knobDrag.lastTime = event.timeStamp;
-        knobDrag.hasMoved = true;
         setParameter(knobDrag.name, knobDrag.rawValue, isFine ? FINE_PARAM_STEP : PARAM_STEP);
         setKnobFeedback(knobDrag, mode);
       }
